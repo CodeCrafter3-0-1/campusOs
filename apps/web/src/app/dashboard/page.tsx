@@ -1,0 +1,125 @@
+﻿"use client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AppShell } from "@/components/app/app-shell";
+import { MetricCard } from "@/components/app/metric-card";
+import { getUser, logoutUser, UserData } from "@/lib/auth";
+import { ShieldCheck, BriefcaseBusiness, BookOpenText, LogOut, User, GraduationCap, Mail, TrendingUp } from "lucide-react";
+import Link from "next/link";
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<UserData | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const u = getUser();
+    if (!u) { router.push("/login"); return; }
+    setUser(u);
+  }, [router]);
+
+  const handleLogout = () => { logoutUser(); router.push("/login"); };
+
+  if (!mounted) return null;
+
+  if (!user) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  const metrics = [
+    { label: "Resume Score", value: user.resumeScore ? user.resumeScore + "/100" : "Not yet", detail: user.resumeScore ? user.resumeVerdict || "Analyzed" : "Upload resume to get score", icon: TrendingUp },
+    { label: "Trust Score", value: "96%", detail: "Active student profile", icon: ShieldCheck },
+    { label: "Matched Jobs", value: "18", detail: "Verified roles for your skills", icon: BriefcaseBusiness },
+    { label: "Resources", value: "42", detail: "CS notes and guides available", icon: BookOpenText },
+  ];
+
+  return (
+    <AppShell activePath="/dashboard">
+      <div className="space-y-6">
+        <div className="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-white/5">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center text-cyan-500 font-black text-xl flex-shrink-0">
+                {user.fullName.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-bold text-slate-900 dark:text-white">Welcome back, {user.fullName.split(" ")[0]}!</h1>
+                  <span className="text-xs bg-green-500/15 text-green-500 border border-green-500/20 px-2 py-0.5 rounded-full font-semibold">Active</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 mt-1">
+                  <span className="flex items-center gap-1 text-slate-400 text-xs"><Mail className="w-3 h-3" />{user.email}</span>
+                  <span className="flex items-center gap-1 text-slate-400 text-xs"><GraduationCap className="w-3 h-3" />{user.course} - {user.collegeName}</span>
+                  <span className="flex items-center gap-1 text-slate-400 text-xs"><User className="w-3 h-3" />Class of {user.graduationYear}</span>
+                </div>
+                {user.lastAnalyzed && <p className="text-xs text-cyan-500 mt-1">Last resume analyzed: {user.lastAnalyzed}</p>}
+              </div>
+            </div>
+            <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-white/10 rounded-xl text-slate-500 dark:text-slate-400 text-sm hover:border-red-500/30 hover:text-red-500 transition-all">
+              <LogOut className="w-4 h-4" />Logout
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {metrics.map((m, i) => (
+            <MetricCard key={i} label={m.label} value={m.value} detail={m.detail} icon={m.icon} />
+          ))}
+        </div>
+
+        {!user.resumeScore && (
+          <div className="rounded-[2rem] border border-cyan-500/20 bg-cyan-500/5 p-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h2 className="text-slate-900 dark:text-white font-bold text-lg">Analyze your resume</h2>
+                <p className="text-slate-500 text-sm mt-1">Upload your resume to get your score, skill gaps and learning roadmap</p>
+              </div>
+              <Link href="/resume-checker" className="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-all flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />Analyze Resume
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {user.resumeScore && (
+          <div className="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 dark:border-white/10 dark:bg-white/5">
+            <h2 className="text-slate-900 dark:text-white font-bold mb-4">Your Resume Analysis</h2>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-4 text-center border border-slate-200 dark:border-white/10">
+                <div className={"text-5xl font-black " + (user.resumeScore >= 75 ? "text-green-500" : user.resumeScore >= 50 ? "text-amber-500" : "text-red-500")}>{user.resumeScore}</div>
+                <div className="text-slate-400 text-xs mt-1">Resume Score</div>
+              </div>
+              <div className="bg-green-500/5 border border-green-500/20 rounded-2xl p-4">
+                <p className="text-green-500 font-semibold text-xs uppercase tracking-wider mb-2">Strengths</p>
+                {(user.resumeStrengths || []).slice(0, 3).map((s, i) => <p key={i} className="text-slate-600 dark:text-slate-300 text-xs mb-1">+ {s}</p>)}
+              </div>
+              <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-4">
+                <p className="text-red-500 font-semibold text-xs uppercase tracking-wider mb-2">To Improve</p>
+                {(user.resumeMissing || []).slice(0, 3).map((m, i) => <p key={i} className="text-slate-600 dark:text-slate-300 text-xs mb-1">- {m}</p>)}
+              </div>
+            </div>
+            <div className="mt-4">
+              <Link href="/resume-checker" className="text-cyan-500 text-sm font-semibold hover:underline">Re-analyze resume</Link>
+            </div>
+          </div>
+        )}
+
+        <div className="grid md:grid-cols-3 gap-4">
+          {[
+            { title: "Check Job Scam", desc: "Verify any job posting before applying", href: "/scam-checker", color: "text-rose-500", bg: "bg-rose-500/5 border-rose-500/20" },
+            { title: "Browse Resources", desc: "CS notes, videos and guides", href: "/resources", color: "text-violet-500", bg: "bg-violet-500/5 border-violet-500/20" },
+            { title: "View Jobs", desc: "Verified internships and full-time roles", href: "/jobs", color: "text-emerald-500", bg: "bg-emerald-500/5 border-emerald-500/20" },
+          ].map((card, i) => (
+            <Link key={i} href={card.href} className={"rounded-2xl border p-5 hover:shadow-lg transition-all group " + card.bg}>
+              <h3 className={"font-bold mb-1 group-hover:underline " + card.color}>{card.title}</h3>
+              <p className="text-slate-500 text-sm">{card.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </AppShell>
+  );
+}

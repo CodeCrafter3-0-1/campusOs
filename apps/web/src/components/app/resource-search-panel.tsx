@@ -1,0 +1,135 @@
+"use client";
+
+import { motion } from "framer-motion";
+import { BookOpen, Download, ExternalLink, Search, Sparkles, Video, FileText, Link } from "lucide-react";
+import { useState, useTransition } from "react";
+import { searchResources } from "@/lib/api";
+import { ResourceItem } from "@/lib/types";
+
+const typeIcon = (type: string) => {
+  if (type === "video") return <Video className="h-3.5 w-3.5" />;
+  if (type === "pdf") return <FileText className="h-3.5 w-3.5" />;
+  if (type === "notes") return <BookOpen className="h-3.5 w-3.5" />;
+  return <Link className="h-3.5 w-3.5" />;
+};
+
+const typeColor = (type: string) => {
+  if (type === "video") return "bg-rose-500/15 text-rose-500 border-rose-500/20";
+  if (type === "pdf") return "bg-blue-500/15 text-blue-500 border-blue-500/20";
+  if (type === "notes") return "bg-amber-500/15 text-amber-600 border-amber-500/20";
+  return "bg-cyan-500/15 text-cyan-600 border-cyan-500/20";
+};
+
+const levelColor = (level: string) => {
+  if (level === "advanced") return "text-rose-500";
+  if (level === "intermediate") return "text-amber-500";
+  return "text-green-500";
+};
+
+export function ResourceSearchPanel({ initialResults }: { initialResults: ResourceItem[] }) {
+  const [query, setQuery] = useState("");
+  const [summary, setSummary] = useState("Browse curated Computer Science resources below. Click Open to visit any resource in a new tab.");
+  const [results, setResults] = useState(initialResults);
+  const [isPending, startTransition] = useTransition();
+  const [filter, setFilter] = useState("all");
+
+  const onSearch = () => {
+    startTransition(async () => {
+      try {
+        const response = await searchResources(query);
+        setSummary(response.aiSummary);
+        setResults(response.results);
+      } catch {
+        const q = query.toLowerCase();
+        const filtered = initialResults.filter(r =>
+          r.title.toLowerCase().includes(q) ||
+          r.subject.toLowerCase().includes(q) ||
+          r.tags.some(t => t.toLowerCase().includes(q))
+        );
+        setResults(filtered.length > 0 ? filtered : initialResults);
+        setSummary(filtered.length > 0 ? "Showing results matching your search." : "No exact match found. Showing all resources.");
+      }
+    });
+  };
+
+  const filtered = filter === "all" ? results : results.filter(r => r.type === filter);
+
+  return (
+    <div className="space-y-6 rounded-[2rem] border border-slate-200/80 bg-white/75 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/5">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-white/10 dark:bg-white/6">
+          <Search className="h-4 w-4 text-slate-400 flex-shrink-0" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && onSearch()}
+            className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+            placeholder="Search DSA, DBMS, OS, Networks..."
+          />
+        </div>
+        <button type="button" onClick={onSearch}
+          className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white dark:bg-white dark:text-slate-950 transition-all hover:opacity-90">
+          {isPending ? "Searching..." : "Search"}
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {["all", "notes", "link", "video", "pdf"].map(f => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={"px-4 py-1.5 rounded-full text-xs font-semibold border transition-all " + (filter === f ? "bg-slate-950 text-white border-slate-950 dark:bg-white dark:text-slate-950 dark:border-white" : "border-slate-200 text-slate-500 hover:border-slate-400 dark:border-white/10 dark:text-slate-400")}>
+            {f.charAt(0).toUpperCase() + f.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      <div className="rounded-[1.6rem] bg-cyan-500/10 p-4 text-sm leading-6 text-slate-700 dark:text-slate-200">
+        <div className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-cyan-700 dark:text-cyan-200">
+          <Sparkles className="h-4 w-4" />
+          Resource Guide
+        </div>
+        <p>{summary}</p>
+      </div>
+
+      <div className="grid gap-4">
+        {filtered.map((resource, index) => (
+          <motion.article key={resource.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: index * 0.06 }}
+            className="rounded-[1.6rem] border border-slate-200/80 bg-slate-50/80 p-5 dark:border-white/10 dark:bg-white/6 hover:border-slate-300 dark:hover:border-white/20 transition-all">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className={"inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold " + typeColor(resource.type)}>
+                    {typeIcon(resource.type)}
+                    {resource.type}
+                  </span>
+                  <span className={"text-xs font-semibold " + levelColor(resource.level)}>
+                    {resource.level}
+                  </span>
+                  <span className="text-xs text-slate-400">{resource.source}</span>
+                </div>
+                <h3 className="text-base font-semibold text-slate-950 dark:text-white mb-1">{resource.title}</h3>
+                <p className="text-sm leading-6 text-slate-600 dark:text-slate-300 mb-3">{resource.description}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {resource.tags.map(tag => (
+                    <span key={tag} className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/8 text-slate-500 dark:text-slate-400 text-xs">{tag}</span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 flex-shrink-0">
+                <a href={resource.url} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 dark:bg-white px-4 py-2.5 text-sm font-semibold text-white dark:text-slate-950 hover:opacity-90 transition-all">
+                  <ExternalLink className="h-4 w-4" />
+                  Open
+                </a>
+              </div>
+            </div>
+          </motion.article>
+        ))}
+        {filtered.length === 0 && (
+          <div className="text-center py-12 text-slate-400">
+            <p className="text-sm">No resources found. Try a different filter or search.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

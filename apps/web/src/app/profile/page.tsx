@@ -1,0 +1,143 @@
+"use client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AppShell } from "@/components/app/app-shell";
+import { getUser, UserData } from "@/lib/auth";
+import { GraduationCap, Mail, MapPin, Shield, Star, Code, Briefcase } from "lucide-react";
+
+export default function ProfilePage() {
+  const router = useRouter();
+  const [user, setUser] = useState<UserData | null>(null);
+
+  useEffect(() => {
+    const u = getUser();
+    if (!u) { router.push("/login"); return; }
+    setUser(u);
+  }, [router]);
+
+  if (!user) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  const skills = user.resumeStrengths && user.resumeStrengths.length > 0
+    ? user.resumeStrengths
+    : ["Upload your resume to extract skills"];
+
+  const initials = user.fullName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+
+  return (
+    <AppShell activePath="/profile">
+      <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+
+        <div className="rounded-[2rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(8,47,73,0.95))] p-7 text-white shadow-[0_35px_110px_rgba(15,23,42,0.25)]">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200">Digital Student ID</p>
+
+          <div className="mt-5 flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-cyan-500/20 border-2 border-cyan-500/40 flex items-center justify-center text-cyan-300 font-black text-2xl flex-shrink-0">
+              {initials}
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">{user.fullName}</h1>
+              <p className="text-cyan-300 text-sm mt-1">{user.course} Student</p>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-[1.8rem] border border-white/10 bg-white/8 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm text-slate-300">Verification status</p>
+                <p className="mt-1 text-xl font-semibold flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-emerald-400" />
+                  Verified Student
+                </p>
+              </div>
+              <div className="rounded-2xl bg-emerald-500/12 px-4 py-2 text-sm font-semibold text-emerald-200 border border-emerald-500/20">
+                Active
+              </div>
+            </div>
+            <div className="grid gap-3 text-sm text-slate-300">
+              <div className="flex items-center gap-2"><GraduationCap className="w-4 h-4 text-cyan-400 flex-shrink-0" />{user.collegeName}</div>
+              <div className="flex items-center gap-2"><Star className="w-4 h-4 text-cyan-400 flex-shrink-0" />{user.course} � Class of {user.graduationYear}</div>
+              <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-cyan-400 flex-shrink-0" />{user.email}</div>
+            </div>
+          </div>
+
+          {user.resumeScore && (
+            <div className="mt-4 rounded-[1.8rem] border border-white/10 bg-white/5 p-4">
+              <p className="text-slate-400 text-xs uppercase tracking-wider mb-2">Resume Score</p>
+              <div className="flex items-center gap-3">
+                <span className={"text-4xl font-black " + (user.resumeScore >= 75 ? "text-green-400" : user.resumeScore >= 50 ? "text-amber-400" : "text-red-400")}>{user.resumeScore}</span>
+                <div className="flex-1">
+                  <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className={"h-full rounded-full " + (user.resumeScore >= 75 ? "bg-green-400" : user.resumeScore >= 50 ? "bg-amber-400" : "bg-red-400")} style={{ width: user.resumeScore + "%" }} />
+                  </div>
+                  <p className="text-slate-400 text-xs mt-1">Last analyzed: {user.lastAnalyzed}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-5">
+          <div className="rounded-[2rem] border border-slate-200/80 bg-white/75 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/5">
+            <h2 className="text-2xl font-semibold text-slate-950 dark:text-white flex items-center gap-2">
+              <Code className="w-5 h-5 text-cyan-500" /> Skills & Strengths
+            </h2>
+            {user.resumeStrengths && user.resumeStrengths.length > 0 ? (
+              <div>
+                <p className="text-slate-500 text-sm mt-2 mb-4">Extracted from your resume analysis</p>
+                <div className="flex flex-wrap gap-2">
+                  {user.resumeStrengths.map((skill, i) => (
+                    <span key={i} className="rounded-full bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 text-xs font-semibold text-cyan-700 dark:text-cyan-300">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 bg-slate-50 dark:bg-white/5 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl p-6 text-center">
+                <p className="text-slate-400 text-sm mb-3">No skills extracted yet</p>
+                <a href="/resume-checker" className="text-cyan-500 text-sm font-semibold hover:underline">Analyze your resume to extract skills ?</a>
+              </div>
+            )}
+          </div>
+
+          {user.resumeMissing && user.resumeMissing.length > 0 && (
+            <div className="rounded-[2rem] border border-slate-200/80 bg-white/75 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/5">
+              <h2 className="text-2xl font-semibold text-slate-950 dark:text-white flex items-center gap-2">
+                <Star className="w-5 h-5 text-amber-500" /> Skills to Learn
+              </h2>
+              <p className="text-slate-500 text-sm mt-2 mb-4">Based on your resume analysis</p>
+              <div className="flex flex-wrap gap-2">
+                {user.resumeMissing.map((skill, i) => (
+                  <span key={i} className="rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-[2rem] border border-slate-200/80 bg-white/75 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/5">
+            <h2 className="text-2xl font-semibold text-slate-950 dark:text-white flex items-center gap-2">
+              <Briefcase className="w-5 h-5 text-violet-500" /> Career Goal
+            </h2>
+            {user.resumeVerdict ? (
+              <div className="mt-4">
+                <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">{user.resumeVerdict}</p>
+                {user.lastAnalyzed && <p className="text-slate-400 text-xs mt-3">Last updated: {user.lastAnalyzed}</p>}
+              </div>
+            ) : (
+              <div className="mt-4 bg-slate-50 dark:bg-white/5 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl p-6 text-center">
+                <p className="text-slate-400 text-sm mb-3">Upload your resume to get AI career analysis</p>
+                <a href="/resume-checker" className="text-cyan-500 text-sm font-semibold hover:underline">Go to Resume Checker ?</a>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    </AppShell>
+  );
+}
